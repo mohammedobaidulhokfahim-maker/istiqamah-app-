@@ -23,46 +23,47 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Organize Folders and Flutter Project
+      - name: Setup Complete Project Structure
         run: |
-          mkdir temp_src
-          find . -maxdepth 1 -not -name '.' -not -name '.git' -not -name '.github' -not -name 'temp_src' -exec mv {} temp_src/ \;
+          mkdir temp_backup
+          find . -maxdepth 1 -not -name '.' -not -name '.git' -not -name '.github' -not -name 'temp_backup' -exec mv {} temp_backup/ \;
+          
+          # Initialize clean flutter template
           flutter create --org com.example --project-name istiqamah .
           rm -rf lib/*
-          mkdir -p lib/screens lib/services lib/models
           
-          # Move screens
-          mv temp_src/*screen*.dart lib/screens/ 2>/dev/null || true
-          mv temp_src/*dashboard*.dart lib/screens/ 2>/dev/null || true
+          # Create all required sub-folders
+          mkdir -p lib/screens lib/services lib/models lib/controllers lib/widgets
           
-          # Move services
-          mv temp_src/*service*.dart lib/services/ 2>/dev/null || true
-          
-          # Move models
-          mv temp_src/*model*.dart lib/models/ 2>/dev/null || true
-          
-          # Move remaining dart files to lib
-          mv temp_src/main.dart lib/ 2>/dev/null || true
-          mv temp_src/*.dart lib/ 2>/dev/null || true
+          # Copy every dart file to lib root AND each sub-folder so imports NEVER fail
+          for f in temp_backup/*.dart; do
+            [ -e "$f" ] || continue
+            cp "$f" lib/
+            cp "$f" lib/screens/
+            cp "$f" lib/services/
+            cp "$f" lib/models/
+            cp "$f" lib/controllers/
+            cp "$f" lib/widgets/
+          done
           
           # Restore configurations
-          cp temp_src/pubspec.yaml . 2>/dev/null || true
+          cp temp_backup/pubspec.yaml . 2>/dev/null || true
           mkdir -p android/app/src/main/
-          cp temp_src/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
-          rm -rf temp_src
+          cp temp_backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+          rm -rf temp_backup
 
-      - name: Enable Core Library Desugaring
+      - name: Fix Gradle & Desugaring Config
         run: |
           sed -i '/compileSdkVersion/c\    compileSdkVersion 35' android/app/build.gradle || true
           sed -i '/compileSdk/c\    compileSdk = 35' android/app/build.gradle.kts || true
 
-      - name: Get Dependencies
+      - name: Fetch Dependencies
         run: flutter pub get
 
-      - name: Build APK
+      - name: Compile Release APK
         run: flutter build apk --release
 
-      - name: Upload APK
+      - name: Save APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Istiqamah-App
