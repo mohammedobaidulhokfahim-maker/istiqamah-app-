@@ -1,0 +1,52 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Organize Files and Flutter Project
+        run: |
+          mkdir temp_files
+          mv * temp_files/ 2>/dev/null || true
+          flutter create --org com.example --project-name istiqamah .
+          rm -rf lib/*
+          cp -r temp_files/*.dart lib/ 2>/dev/null || true
+          cp temp_files/pubspec.yaml . 2>/dev/null || true
+          cp temp_files/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+          rm -rf temp_files
+
+      - name: Enable Core Library Desugaring
+        run: |
+          sed -i '/compileSdkVersion/c\    compileSdkVersion 35' android/app/build.gradle || true
+          sed -i '/compileSdk/c\    compileSdk = 35' android/app/build.gradle.kts || true
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Istiqamah-App
+          path: build/app/outputs/flutter-apk/app-release.apk
