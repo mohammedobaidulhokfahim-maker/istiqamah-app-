@@ -23,16 +23,33 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Organize Files and Flutter Project
+      - name: Organize Folders and Flutter Project
         run: |
-          mkdir temp_files
-          mv * temp_files/ 2>/dev/null || true
+          mkdir temp_src
+          find . -maxdepth 1 -not -name '.' -not -name '.git' -not -name '.github' -not -name 'temp_src' -exec mv {} temp_src/ \;
           flutter create --org com.example --project-name istiqamah .
           rm -rf lib/*
-          cp -r temp_files/*.dart lib/ 2>/dev/null || true
-          cp temp_files/pubspec.yaml . 2>/dev/null || true
-          cp temp_files/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
-          rm -rf temp_files
+          mkdir -p lib/screens lib/services lib/models
+          
+          # Move screens
+          mv temp_src/*screen*.dart lib/screens/ 2>/dev/null || true
+          mv temp_src/*dashboard*.dart lib/screens/ 2>/dev/null || true
+          
+          # Move services
+          mv temp_src/*service*.dart lib/services/ 2>/dev/null || true
+          
+          # Move models
+          mv temp_src/*model*.dart lib/models/ 2>/dev/null || true
+          
+          # Move remaining dart files to lib
+          mv temp_src/main.dart lib/ 2>/dev/null || true
+          mv temp_src/*.dart lib/ 2>/dev/null || true
+          
+          # Restore configurations
+          cp temp_src/pubspec.yaml . 2>/dev/null || true
+          mkdir -p android/app/src/main/
+          cp temp_src/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+          rm -rf temp_src
 
       - name: Enable Core Library Desugaring
         run: |
